@@ -1,0 +1,20 @@
+{
+  "name": "laserquest",
+  "version": "0.0.0",
+  "description": "high-level wrapper around hyperquest http client library",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test mocha -R spec test"
+  },
+  "repository": "",
+  "author": "",
+  "license": "BSD",
+  "dependencies": {
+    "hyperquest": "0.1.x",
+    "cookie-jar": "0.2.x"
+  },
+  "devDependencies": {
+    "mocha": "1.x.x",
+    "express": "3.x.x"
+  }
+}
