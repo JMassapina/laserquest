@@ -25,6 +25,7 @@ util.inherits(LaserQuest, EventEmitter);
 
 LaserQuest.prototype._onTimeout = function() {
     this._req.aborted = true;
+    this._req.emit('close');
     this.emit('error', new Error('Request timed out'));
 };
 
@@ -59,7 +60,12 @@ LaserQuest.prototype.proxy = function(req, res) {
         }
     });
 
-    this._req.on('error', this.emit.bind(this, 'error'));
+    this._req.on('error', function(err) {
+        self._clearRequestTimeout();
+        if (self._req.aborted == null) {
+            self.emit('error', err);
+        }
+    });
     this._req.on('end', function() {
         if (self._req.aborted == null) {
             res.end();
@@ -89,6 +95,10 @@ LaserQuest.prototype._parseCookies = function(resp) {
 };
 
 LaserQuest.prototype._followRedirects = function(uri, res, cb) {
+    if (this._req.aborted != null) {
+        return;
+    }
+
     var self = this;
 
     if (res.statusCode < 300 || res.statusCode > 399) {
@@ -173,16 +183,17 @@ LaserQuest.prototype.request = function(cb) {
     this._req.on('error', function(err) {
         self._clearRequestTimeout();
 
-        self.emit('error', err);
+        if (self._req.aborted == null) {
+            self.emit('error', err);
+        }
     });
 
     this._redirects = 0;
     this._req.on('response', function(response) {
-        self._clearRequestTimeout();
-
         if (self._req.aborted == null) {
             self._parseCookies(response);
             self._followRedirects(self.uri, response, function(lastResponse) {
+                self._clearRequestTimeout();
                 self._handleResponse(lastResponse, function(body) {
                     self.emit('response', lastResponse, body);
                 });

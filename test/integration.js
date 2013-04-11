@@ -39,6 +39,10 @@ app.get('/timeout', function(req, res) {
     }, 700);
 });
 
+app.get('/redirectTimeout', function(req, res) {
+    res.redirect('/timeout');
+});
+
 app.get('/error', function() {
     throw new Error('this is an error');
 });
@@ -104,6 +108,18 @@ describe('LaserQuest', function() {
             req.on('response', function (resp, data) {
                 assert.equal(resp.statusCode, '200');
                 assert.equal(resp.url, '');
+                done();
+            });
+        });
+
+        it('times out when redirects timeout', function(done) {
+            this.slow(1050);
+            var testObj = laserquest(serverUri + '/redirectTimeout', {
+                timeout: 500
+            });
+            var req = testObj.request();
+            req.on('error', function (err) {
+                assert.equal(err.message, 'Request timed out');
                 done();
             });
         });
@@ -185,6 +201,24 @@ describe('LaserQuest', function() {
             assert.equal(err.message, 'Request timed out');
             done();
         });
+    });
+
+    it('timeouts do not fire response event when the slow request completes', function(done) {
+        this.slow(1650);
+        var testObj = laserquest(serverUri + '/timeout', {
+            timeout: 500
+        });
+
+        var req = testObj.request();
+        req.on('error', function(err) {
+            assert.equal(err.message, 'Request timed out');
+        });
+
+        req.on('response', function() {
+            done();
+        });
+
+        setTimeout(done, 800);
     });
 
     it('sends body payloads', function(done) {
