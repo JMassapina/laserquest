@@ -29,7 +29,7 @@ Both `uri` and `options` are optional, although a uri is required.
 * form - an object containing form parameters
 * jar - if supplied, use this cookie jar object to store cookies. No jar is used by default. You can obtain a cookie by calling `laserquest.jar()`
 
-
+#### Methods
 
     client.request(cb)
 
