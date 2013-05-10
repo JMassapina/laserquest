@@ -59,6 +59,10 @@ app.post('/form', function(req, res) {
     res.send(200);
 });
 
+app.post('/empty', function(req, res) {
+    res.send(200);
+});
+
 app.get('/cookies', function(req, res) {
     res.cookie('test', 'value');
     res.send(200);
@@ -190,6 +194,60 @@ describe('LaserQuest', function() {
 
     });
 
+    it('proxies post requests', function(done) {
+        this.slow(1200);
+        var app = express();
+        app.post('/', function(req, res) {   
+            var testObj = laserquest({
+                uri: serverUri + '/post',
+                method: 'post'
+            });  
+            testObj.proxy(req, res); 
+        });
+        
+        var server = app.listen(0, function() {
+            var lq = laserquest({
+                uri: 'http://127.0.0.1:' + server.address().port,
+                method: 'post',
+                body: JSON.stringify({test: 'value'}),
+                headers: {
+                    'Content-type': 'application/json'
+                }
+            });
+            var req = lq.request();
+
+            req.on('response', function(resp) {
+                assert.equal(resp.statusCode, 200);
+                done();
+            });
+        });
+    });
+
+    it('proxies post requests with no body', function(done) {
+        this.slow(1200);
+        var app = express();
+        app.post('/', function(req, res) {   
+            var testObj = laserquest({
+                uri: serverUri + '/empty',
+                method: 'post'
+            }); 
+            testObj.proxy(req, res); 
+        });
+        
+        var server = app.listen(0, function() {
+            var lq = laserquest({
+                uri: 'http://127.0.0.1:' + server.address().port,
+                method: 'post'
+            });
+            var req = lq.request();
+
+            req.on('response', function(resp) {
+                assert.equal(resp.statusCode, 200);
+                done();
+            });
+        });
+    });
+
     it('times out on slow requests', function(done) {
         this.slow(1200);
         var testObj = laserquest(serverUri + '/timeout', {
@@ -251,6 +309,18 @@ describe('LaserQuest', function() {
             assert.equal(resp.statusCode, 200);
             done();
         });
+    });
+
+    it('correctly sends post requests with no body', function(done) {
+        var testObj = laserquest(serverUri + '/empty', {
+            method: 'post'
+        });
+
+        var req = testObj.request();
+        req.on('response', function(resp) {
+            assert.equal(resp.statusCode, 200);
+            done();
+        })
     });
 
     it('uses a supplied cookie jar to store cookies', function(done) {

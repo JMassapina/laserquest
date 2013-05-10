@@ -20,6 +20,10 @@ function LaserQuest(uri, opts) {
     }
     this.parsedUri = url.parse(this.uri);
     this.maxRedirects = 5;
+
+    this.options.method = this.options.method || 'GET';
+    var method = this.options.method.toLowerCase();
+    this.hasBody = (method === 'post' || method === 'put');
 };
 util.inherits(LaserQuest, EventEmitter);
 
@@ -35,13 +39,29 @@ LaserQuest.prototype._clearRequestTimeout = function() {
     }
 };
 
+LaserQuest.prototype._defaultHeaders = function(req) {
+    if (this.options.headers != null) {
+        return;
+    }
+
+    this.options.headers = {};
+    
+    if (req.headers['content-type'] != null) {
+        this.options.headers['Content-type'] = req.headers['content-type'];
+    }
+    
+};
+
 LaserQuest.prototype.proxy = function(req, res) {
     var self = this;
+    
+    this._defaultHeaders(req);
+
     this._req = hyperquest(this.uri, this.options);
     
     this._req.setHeader('Host', this.parsedUri.host);
-    
-    req.pipe(this._req, {end: false});
+
+    req.pipe(this._req, {end: this.hasBody});
 
     if (this.options.timeout != null) {
         this._req.timeoutId = setTimeout(this._onTimeout.bind(this), this.options.timeout);
@@ -56,7 +76,7 @@ LaserQuest.prototype.proxy = function(req, res) {
                     res.setHeader(name, response.headers[name]);
                 }
             }
-            self._req.pipe(res, {end: false});
+            self._req.pipe(res, {end: true});
         }
     });
 
@@ -68,7 +88,6 @@ LaserQuest.prototype.proxy = function(req, res) {
     });
     this._req.on('end', function() {
         if (self._req.aborted == null) {
-            res.end();
             self.emit('end');  
         }
     });
@@ -202,12 +221,16 @@ LaserQuest.prototype.request = function(cb) {
     });
 
     if (this.options.body != null) {
-        this._req.end(this.options.body);
+        this._req.write(this.options.body);
     }
 
     if (this.options.form != null) {
         this._req.setHeader('Content-type', 'application/x-www-form-urlencoded; charset=utf-8');
-        this._req.end(querystring.stringify(this.options.form).toString('utf8'));
+        this._req.write(querystring.stringify(this.options.form).toString('utf8'));
+    }
+
+    if (this.hasBody) {
+        this._req.end();
     }
 
     this._req.setHeader('Host', this.parsedUri.host);
