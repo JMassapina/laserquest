@@ -216,8 +216,12 @@ LaserQuest.prototype.request = function(cb) {
                 self._handleResponse(lastResponse, function(body) {
                     self.emit('response', lastResponse, body);
                 });
-            })
+            });
         }
+    });
+
+    this._req.on('end', function() {
+        self.emit('end');
     });
 
     if (this.options.body != null) {

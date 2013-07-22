@@ -323,6 +323,33 @@ describe('LaserQuest', function() {
         })
     });
 
+    it('emits end events once the request is finished', function(done) {
+        var testObj = laserquest(serverUri + '/');
+
+        var req = testObj.request();
+        req.on('end', function() {
+            done();
+        });
+    });
+
+    it('emits end events once the proxy request is finished', function(done) {
+        this.slow(1200);
+        var app = express();
+        app.get('/', function(req, res) {    
+            var testObj = laserquest(serverUri + '/streaming');  
+            testObj.proxy(req, res); 
+        });
+        
+        var server = app.listen(0, function() {
+            var lq = laserquest('http://127.0.0.1:' + server.address().port);
+            var req = lq.request();
+
+            req.on('end', function() {
+                done();
+            });
+        });
+    });
+
     it('uses a supplied cookie jar to store cookies', function(done) {
         var jar = laserquest.jar();
         var testObj = laserquest(serverUri + '/cookies', {jar: jar});
